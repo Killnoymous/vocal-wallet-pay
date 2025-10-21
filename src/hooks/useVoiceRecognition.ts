@@ -60,9 +60,15 @@ export const useVoiceRecognition = ({
     setRecognition(recognitionInstance);
 
     return () => {
-      recognitionInstance.stop();
+      if (recognitionInstance) {
+        try {
+          recognitionInstance.stop();
+        } catch (e) {
+          // Already stopped
+        }
+      }
     };
-  }, [continuous, language, onResult, onError]);
+  }, [continuous, language]);
 
   const startListening = useCallback(() => {
     if (recognition && !isListening) {
@@ -74,7 +80,7 @@ export const useVoiceRecognition = ({
         onError?.('Failed to start listening');
       }
     }
-  }, [recognition, isListening, onError]);
+  }, [recognition, isListening]);
 
   const stopListening = useCallback(() => {
     if (recognition && isListening) {
