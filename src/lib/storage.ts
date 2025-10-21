@@ -15,7 +15,7 @@ export interface WalletData {
 }
 
 const STORAGE_KEY = 'lovable_wallet_data';
-const DEMO_PASSPHRASE = 'sicario';
+const DEMO_PASSPHRASE = 'harsh';
 
 export const getWalletData = (): WalletData => {
   try {
@@ -75,7 +75,18 @@ export const validateDemoPassphrase = (spokenPhrase: string): boolean => {
   const target = DEMO_PASSPHRASE.toLowerCase();
   
   // Allow for some flexibility in speech recognition
-  return normalized.includes(target) || target.includes(normalized);
+  // Check for exact match, contains match, or similar sounding words
+  const exactMatch = normalized === target;
+  const containsMatch = normalized.includes(target) || target.includes(normalized);
+  
+  // Handle common speech recognition variations for "harsh"
+  // Common misrecognitions: "hash", "harsh", "harsh", etc.
+  const variations = ['harsh', 'hash', 'harsh', 'harsh', 'harsh'];
+  const variationMatch = variations.some(variation => 
+    normalized.includes(variation) || variation.includes(normalized)
+  );
+  
+  return exactMatch || containsMatch || variationMatch;
 };
 
 export const generateTransactionId = (): string => {
