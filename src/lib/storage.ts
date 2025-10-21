@@ -80,11 +80,19 @@ export const validateDemoPassphrase = (spokenPhrase: string): boolean => {
   const containsMatch = normalized.includes(target) || target.includes(normalized);
   
   // Handle common speech recognition variations for "harsh"
-  // Common misrecognitions: "hash", "harsh", "harsh", etc.
-  const variations = ['harsh', 'hash', 'harsh', 'harsh', 'harsh'];
+  // Common misrecognitions: "hash", "harsh", etc.
+  const variations = ['harsh', 'hash'];
   const variationMatch = variations.some(variation => 
     normalized.includes(variation) || variation.includes(normalized)
   );
+  
+  // Debug logging to help troubleshoot
+  console.log('Voice input:', spokenPhrase);
+  console.log('Normalized:', normalized);
+  console.log('Target:', target);
+  console.log('Exact match:', exactMatch);
+  console.log('Contains match:', containsMatch);
+  console.log('Variation match:', variationMatch);
   
   return exactMatch || containsMatch || variationMatch;
 };
