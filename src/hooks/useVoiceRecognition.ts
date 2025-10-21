@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef } from 'react';
 
 interface VoiceRecognitionResult {
   transcript: string;
@@ -23,12 +23,20 @@ export const useVoiceRecognition = ({
   const [isSupported, setIsSupported] = useState(false);
   const [recognition, setRecognition] = useState<any | null>(null);
 
+  // Keep latest callbacks without reinitializing recognition
+  const onResultRef = useRef<typeof onResult>(onResult);
+  const onErrorRef = useRef<typeof onError>(onError);
   useEffect(() => {
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    
+    onResultRef.current = onResult;
+    onErrorRef.current = onError;
+  }, [onResult, onError]);
+
+  useEffect(() => {
+    const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+
     if (!SpeechRecognition) {
       setIsSupported(false);
-      onError?.('Speech recognition is not supported in this browser');
+      onErrorRef.current?.('Speech recognition is not supported in this browser');
       return;
     }
 
@@ -38,34 +46,34 @@ export const useVoiceRecognition = ({
     recognitionInstance.interimResults = true;
     recognitionInstance.lang = language;
 
-    recognitionInstance.onresult = (event) => {
+    recognitionInstance.onresult = (event: any) => {
       const result = event.results[event.results.length - 1];
-      const transcript = result[0].transcript;
-      const confidence = result[0].confidence;
-      const isFinal = result.isFinal;
+      if (!result || !result[0]) return;
+      const transcript = String(result[0].transcript || '');
+      const confidence = Number(result[0].confidence || 0);
+      const isFinal = !!result.isFinal;
 
-      onResult?.({ transcript, confidence, isFinal });
+      onResultRef.current?.({ transcript, confidence, isFinal });
     };
 
-    recognitionInstance.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+    recognitionInstance.onerror = (event: any) => {
+      console.error('Speech recognition error:', event?.error);
       setIsListening(false);
-      onError?.(event.error);
+      onErrorRef.current?.(event?.error || 'Unknown error');
     };
 
     recognitionInstance.onend = () => {
+      // Recognition ended (either pause between phrases or manual stop)
       setIsListening(false);
     };
 
     setRecognition(recognitionInstance);
 
     return () => {
-      if (recognitionInstance) {
-        try {
-          recognitionInstance.stop();
-        } catch (e) {
-          // Already stopped
-        }
+      try {
+        recognitionInstance.stop();
+      } catch {
+        // no-op
       }
     };
   }, [continuous, language]);
@@ -77,14 +85,18 @@ export const useVoiceRecognition = ({
         setIsListening(true);
       } catch (error) {
         console.error('Failed to start recognition:', error);
-        onError?.('Failed to start listening');
+        onErrorRef.current?.('Failed to start listening');
       }
     }
   }, [recognition, isListening]);
 
   const stopListening = useCallback(() => {
     if (recognition && isListening) {
-      recognition.stop();
+      try {
+        recognition.stop();
+      } catch {
+        // no-op
+      }
       setIsListening(false);
     }
   }, [recognition, isListening]);

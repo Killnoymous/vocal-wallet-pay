@@ -45,6 +45,7 @@ const Index = () => {
             title: 'Activating UPI Scanner',
             description: 'Opening camera to scan QR code...',
           });
+          stopListening();
           setFlowState('scanning-qr');
         } else if (normalized.includes('cancel')) {
           setFlowState('idle');
@@ -64,6 +65,7 @@ const Index = () => {
               title: 'Amount Captured',
               description: `You said: ${formatCurrency(parsedAmount)}`,
             });
+            stopListening();
             setFlowState('confirming-payment');
           }
         }
