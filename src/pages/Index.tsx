@@ -39,6 +39,23 @@ const Index = () => {
 
     // State-specific voice command handling
     switch (flowState) {
+      case 'idle':
+        // Constant listening in idle state
+        if (normalized.includes('upi') && normalized.includes('activate')) {
+          toast({
+            title: 'Activating UPI Scanner',
+            description: 'Opening camera to scan QR code...',
+          });
+          setFlowState('scanning-qr');
+        } else if (normalized.includes('scan') || normalized.includes('qr')) {
+          toast({
+            title: 'Opening QR Scanner',
+            description: 'Camera activated for QR scanning...',
+          });
+          setFlowState('scanning-qr');
+        }
+        break;
+
       case 'listening-activate':
         if (normalized.includes('upi') && normalized.includes('activate')) {
           toast({
@@ -96,15 +113,6 @@ const Index = () => {
     },
   });
 
-  const handleActivateVoice = () => {
-    setFlowState('listening-activate');
-    setTranscript('');
-    startListening();
-    toast({
-      title: 'Listening...',
-      description: 'Say "UPI ACTIVATE" to start scanning',
-    });
-  };
 
   const handleQRScan = (qrData: string) => {
     const details = parseUPIQR(qrData);
@@ -179,6 +187,13 @@ const Index = () => {
     stopListening();
   };
 
+  // Start listening automatically when component mounts and in idle state
+  useEffect(() => {
+    if (flowState === 'idle') {
+      startListening();
+    }
+  }, [flowState, startListening]);
+
   useEffect(() => {
     return () => {
       stopListening();
@@ -227,20 +242,23 @@ const Index = () => {
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Ready to Pay?</h2>
               <p className="text-muted-foreground">
-                Use your voice or scan a QR code to get started
+                I'm listening for your voice commands
               </p>
             </div>
 
-            <div className="space-y-4">
-              <Button
-                onClick={handleActivateVoice}
-                className="w-full h-20 text-lg gradient-primary shadow-glow"
-                size="lg"
-              >
-                <Mic className="mr-3 h-6 w-6" />
-                Activate Voice Payment
-              </Button>
+            {/* Voice Indicator for constant listening */}
+            <div className="flex flex-col items-center justify-center space-y-6">
+              <VoiceIndicator isListening={isListening} transcript={transcript} />
+              
+              <div className="text-center max-w-md">
+                <h3 className="text-lg font-semibold mb-2">Say "UPI ACTIVATE" to start</h3>
+                <p className="text-muted-foreground text-sm">
+                  Or say "scan QR" to open camera directly
+                </p>
+              </div>
+            </div>
 
+            <div className="space-y-4">
               <Button
                 onClick={() => setFlowState('scanning-qr')}
                 variant="outline"
@@ -248,19 +266,17 @@ const Index = () => {
                 size="lg"
               >
                 <QrCode className="mr-3 h-6 w-6" />
-                Scan QR Code
+                Scan QR Code Manually
               </Button>
             </div>
 
             <div className="glass-card rounded-xl p-6 space-y-2">
-              <h3 className="font-semibold mb-3">How it works:</h3>
-              <ol className="space-y-2 text-sm text-muted-foreground">
-                <li>1. Say "UPI ACTIVATE" or tap scan button</li>
-                <li>2. Scan merchant's QR code</li>
-                <li>3. Say the amount (e.g., "two hundred rupees")</li>
-                <li>4. Confirm and authenticate with voice</li>
-                <li>5. Payment complete!</li>
-              </ol>
+              <h3 className="font-semibold mb-3">Voice Commands:</h3>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li>• "UPI ACTIVATE" - Start payment process</li>
+                <li>• "scan QR" - Open QR scanner</li>
+                <li>• "cancel" - Cancel current operation</li>
+              </ul>
               <p className="text-xs text-muted-foreground pt-3 border-t border-border">
                 <strong>Demo passphrase:</strong> "Harsh"
               </p>
