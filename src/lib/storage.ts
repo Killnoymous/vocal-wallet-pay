@@ -15,7 +15,7 @@ export interface WalletData {
 }
 
 const STORAGE_KEY = 'lovable_wallet_data';
-const DEMO_PASSPHRASE = 'open sesame 123';
+const DEMO_PASSPHRASE = 'sicario';
 
 export const getWalletData = (): WalletData => {
   try {

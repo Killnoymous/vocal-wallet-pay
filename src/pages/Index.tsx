@@ -75,11 +75,11 @@ const Index = () => {
         if (validateDemoPassphrase(result.transcript)) {
           handlePaymentSuccess();
         } else {
-          toast({
-            title: 'Authentication Failed',
-            description: 'Incorrect passphrase. Try saying "open sesame 123"',
-            variant: 'destructive',
-          });
+            toast({
+              title: 'Authentication Failed',
+              description: 'Incorrect passphrase. Try saying "Sicario"',
+              variant: 'destructive',
+            });
         }
         break;
     }
@@ -140,7 +140,7 @@ const Index = () => {
     startListening();
     toast({
       title: 'Authenticate Payment',
-      description: 'Say your demo passphrase: "open sesame 123"',
+      description: 'Say your demo passphrase: "Sicario"',
     });
   };
 
@@ -262,7 +262,7 @@ const Index = () => {
                 <li>5. Payment complete!</li>
               </ol>
               <p className="text-xs text-muted-foreground pt-3 border-t border-border">
-                <strong>Demo passphrase:</strong> "open sesame 123"
+                <strong>Demo passphrase:</strong> "Sicario"
               </p>
             </div>
           </div>
@@ -291,7 +291,7 @@ const Index = () => {
                 <>
                   <h2 className="text-2xl font-bold mb-2">Authenticate</h2>
                   <p className="text-muted-foreground">
-                    Say: "open sesame 123"
+                    Say: "Sicario"
                   </p>
                 </>
               )}
