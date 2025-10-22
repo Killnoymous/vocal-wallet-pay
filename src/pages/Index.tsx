@@ -152,6 +152,16 @@ const Index = () => {
     });
   };
 
+  const handleBackToAmount = () => {
+    setFlowState('listening-amount');
+    setTranscript('');
+    startListening();
+    toast({
+      title: 'Enter Amount Again',
+      description: 'Say the amount you want to pay',
+    });
+  };
+
   const handlePaymentSuccess = () => {
     if (!amount || !upiDetails) return;
 
@@ -334,7 +344,7 @@ const Index = () => {
           payeeVPA={upiDetails?.payeeVPA}
           amount={amount}
           onConfirm={handleConfirmPayment}
-          onCancel={handleReset}
+          onCancel={handleBackToAmount}
         />
       )}
 
