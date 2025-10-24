@@ -10,8 +10,10 @@ import { PaymentSuccess } from '@/components/PaymentSuccess';
 import { TransactionHistory } from '@/components/TransactionHistory';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { parseUPIQR, parseVoiceAmount, formatCurrency, UPIDetails } from '@/lib/upiParser';
-import { getWalletData, saveTransaction, validateDemoPassphrase, generateTransactionId, Transaction } from '@/lib/storage';
-import { Wallet, QrCode, Mic, History } from 'lucide-react';
+import { getWalletData, saveTransaction, validateDemoPassphrase, generateTransactionId, Transaction, setCurrentUser, getCurrentUserName, refreshWalletData } from '@/lib/storage';
+import { apiService } from '@/lib/api';
+import { Wallet, QrCode, Mic, History, User, ChevronDown, RefreshCw } from 'lucide-react';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { useToast } from '@/hooks/use-toast';
 
 type FlowState = 
@@ -27,11 +29,13 @@ type FlowState =
 const Index = () => {
   const { toast } = useToast();
   const [flowState, setFlowState] = useState<FlowState>('idle');
-  const [walletData, setWalletData] = useState(getWalletData());
+  const [walletData, setWalletData] = useState({ balance: 0, transactions: [] });
   const [transcript, setTranscript] = useState('');
   const [upiDetails, setUpiDetails] = useState<UPIDetails | null>(null);
   const [amount, setAmount] = useState<number | null>(null);
   const [successTransaction, setSuccessTransaction] = useState<Transaction | null>(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [currentUser, setCurrentUserState] = useState(getCurrentUserName());
 
   const handleVoiceResult = useCallback((result: { transcript: string; isFinal: boolean }) => {
     setTranscript(result.transcript);
@@ -92,15 +96,24 @@ const Index = () => {
         break;
 
       case 'authenticating':
-        if (validateDemoPassphrase(result.transcript)) {
-          handlePaymentSuccess();
-        } else {
+        validateDemoPassphrase(result.transcript).then((isValid) => {
+          if (isValid) {
+            handlePaymentSuccess();
+          } else {
             toast({
               title: 'Authentication Failed',
-              description: 'Incorrect passphrase. Try saying "Harsh"',
+              description: `Incorrect passphrase. Try saying "${currentUser}"`,
               variant: 'destructive',
             });
-        }
+          }
+        }).catch((error) => {
+          console.error('Authentication error:', error);
+          toast({
+            title: 'Authentication Error',
+            description: 'Failed to validate passphrase',
+            variant: 'destructive',
+          });
+        });
         break;
     }
   }, [flowState, toast]);
@@ -151,7 +164,7 @@ const Index = () => {
     startListening();
     toast({
       title: 'Authenticate Payment',
-      description: 'Say your demo passphrase: "Harsh"',
+      description: `Say your demo passphrase: "${currentUser}"`,
     });
   };
 
@@ -165,7 +178,7 @@ const Index = () => {
     });
   };
 
-  const handlePaymentSuccess = () => {
+  const handlePaymentSuccess = async () => {
     if (!amount || !upiDetails) return;
 
     const transaction: Transaction = {
@@ -179,16 +192,29 @@ const Index = () => {
       transactionNote: upiDetails.transactionNote,
     };
 
-    saveTransaction(transaction);
-    setSuccessTransaction(transaction);
-    setWalletData(getWalletData());
-    setFlowState('success');
-    stopListening();
-    
-    toast({
-      title: 'Payment Successful! 🎉',
-      description: `Paid ${formatCurrency(amount)} to ${upiDetails.payeeName}`,
-    });
+    try {
+      await saveTransaction(transaction);
+      setSuccessTransaction(transaction);
+      
+      // Refresh wallet data
+      const updatedWalletData = await getWalletData();
+      setWalletData(updatedWalletData);
+      
+      setFlowState('success');
+      stopListening();
+      
+      toast({
+        title: 'Payment Successful! 🎉',
+        description: `Paid ${formatCurrency(amount)} to ${upiDetails.payeeName}`,
+      });
+    } catch (error) {
+      console.error('Failed to save transaction:', error);
+      toast({
+        title: 'Transaction Failed',
+        description: 'Failed to process payment. Please try again.',
+        variant: 'destructive',
+      });
+    }
   };
 
   const handleReset = () => {
@@ -200,12 +226,104 @@ const Index = () => {
     stopListening();
   };
 
+  const handleUserSwitch = async (userName: string) => {
+    try {
+      setCurrentUser(userName);
+      setCurrentUserState(userName);
+      
+      // Reload wallet data for the new user
+      setIsLoading(true);
+      const data = await getWalletData();
+      setWalletData(data);
+      
+      // Disconnect old WebSocket and connect new one
+      apiService.disconnectWebSocket();
+      if (data.transactions.length > 0) {
+        const userId = data.transactions[0].userId;
+        apiService.connectWebSocket(userId, (newBalance) => {
+          setWalletData(prev => ({ ...prev, balance: newBalance }));
+        });
+      }
+      
+      toast({
+        title: 'User Switched',
+        description: `Now logged in as ${userName}`,
+      });
+    } catch (error) {
+      console.error('Failed to switch user:', error);
+      toast({
+        title: 'Switch Failed',
+        description: 'Failed to switch user. Please try again.',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRefresh = async () => {
+    try {
+      setIsLoading(true);
+      const data = await refreshWalletData();
+      setWalletData(data);
+      
+      toast({
+        title: 'Balance Refreshed',
+        description: 'Wallet data updated successfully',
+      });
+    } catch (error) {
+      console.error('Failed to refresh wallet:', error);
+      toast({
+        title: 'Refresh Failed',
+        description: 'Failed to refresh wallet data',
+        variant: 'destructive',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  // Load initial wallet data and set up WebSocket
+  useEffect(() => {
+    const loadInitialData = async () => {
+      try {
+        setIsLoading(true);
+        const data = await getWalletData();
+        setWalletData(data);
+        
+        // Set up WebSocket connection for real-time balance updates
+        if (data.transactions.length > 0) {
+          // Get user ID from the first transaction
+          const userId = data.transactions[0].userId;
+          apiService.connectWebSocket(userId, (newBalance) => {
+            setWalletData(prev => ({ ...prev, balance: newBalance }));
+          });
+        }
+      } catch (error) {
+        console.error('Failed to load initial data:', error);
+        toast({
+          title: 'Connection Error',
+          description: 'Failed to connect to server. Using offline mode.',
+          variant: 'destructive',
+        });
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+
+    return () => {
+      apiService.disconnectWebSocket();
+    };
+  }, [toast]);
+
   // Start listening automatically when component mounts and in idle state
   useEffect(() => {
-    if (flowState === 'idle') {
+    if (flowState === 'idle' && !isLoading) {
       startListening();
     }
-  }, [flowState, startListening]);
+  }, [flowState, startListening, isLoading]);
 
   useEffect(() => {
     return () => {
@@ -228,13 +346,46 @@ const Index = () => {
                 <p className="text-xs text-muted-foreground">Voice-Powered UPI</p>
               </div>
             </div>
-            <Button
-              variant="outline"
-              size="icon"
-              onClick={() => setFlowState(flowState === 'history' ? 'idle' : 'history')}
-            >
-              <History className="h-5 w-5" />
-            </Button>
+            <div className="flex items-center gap-2">
+              <Select value={currentUser} onValueChange={handleUserSwitch}>
+                <SelectTrigger className="w-32 h-10">
+                  <div className="flex items-center gap-2">
+                    <User className="h-4 w-4" />
+                    <span className="text-sm font-medium">{currentUser}</span>
+                  </div>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="Harsh">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>Harsh</span>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="Tanya">
+                    <div className="flex items-center gap-2">
+                      <User className="h-4 w-4" />
+                      <span>Tanya</span>
+                    </div>
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={handleRefresh}
+                disabled={isLoading}
+                title="Refresh balance"
+              >
+                <RefreshCw className={`h-5 w-5 ${isLoading ? 'animate-spin' : ''}`} />
+              </Button>
+              <Button
+                variant="outline"
+                size="icon"
+                onClick={() => setFlowState(flowState === 'history' ? 'idle' : 'history')}
+              >
+                <History className="h-5 w-5" />
+              </Button>
+            </div>
           </div>
           
           <div className="glass-card rounded-xl p-4 gradient-primary shadow-glow">
@@ -251,7 +402,12 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container max-w-lg mx-auto px-4 py-6">
-        {flowState === 'history' ? (
+        {isLoading ? (
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-4">
+            <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary"></div>
+            <p className="text-muted-foreground">Loading wallet data...</p>
+          </div>
+        ) : flowState === 'history' ? (
           <TransactionHistory transactions={walletData.transactions} />
         ) : flowState === 'idle' ? (
           <div className="space-y-6">
@@ -322,7 +478,7 @@ const Index = () => {
                 <li>• "cancel" - Cancel current operation</li>
               </ul>
               <p className="text-xs text-muted-foreground pt-3 border-t border-border">
-                <strong>Demo passphrase:</strong> "Harsh"
+                <strong>Demo passphrase:</strong> "{currentUser}"
               </p>
             </div>
           </div>
@@ -376,7 +532,7 @@ const Index = () => {
                 <>
                   <h2 className="text-2xl font-bold mb-2">Authenticate</h2>
                   <p className="text-muted-foreground">
-                    {fallbackMode ? "Type" : "Say"}: "Harsh"
+                    Say: "{currentUser}"
                   </p>
                 </>
               )}
