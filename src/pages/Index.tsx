@@ -1,6 +1,7 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { VoiceIndicator } from '@/components/VoiceIndicator';
+import { WebAudioIndicator } from '@/components/WebAudioIndicator';
 import { FirefoxFallback } from '@/components/FirefoxFallback';
 import { BrowserDetection } from '@/components/BrowserDetection';
 import { QRScanner } from '@/components/QRScanner';
@@ -117,7 +118,7 @@ const Index = () => {
     }
   }, [flowState, toast]);
 
-  const { isListening, isSupported, fallbackMode, startListening, stopListening, simulateVoiceInput } = useVoiceRecognition({
+  const { isListening, isSupported, fallbackMode, useWebAudio, startListening, stopListening, simulateVoiceInput } = useVoiceRecognition({
     onResult: handleVoiceResult,
     onError: (error) => {
       toast({
@@ -413,12 +414,29 @@ const Index = () => {
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Ready to Pay?</h2>
               <p className="text-muted-foreground">
-                {fallbackMode ? "Use text input for commands" : "I'm listening for your voice commands"}
+                {useWebAudio ? "Using Web Audio API for voice recognition" : 
+                 fallbackMode ? "Use text input for commands" : 
+                 "I'm listening for your voice commands"}
               </p>
             </div>
 
-            {/* Voice Indicator or Firefox Fallback */}
-            {fallbackMode ? (
+            {/* Voice Indicator, Web Audio, or Firefox Fallback */}
+            {useWebAudio ? (
+              <div className="flex flex-col items-center justify-center space-y-6">
+                <WebAudioIndicator 
+                  isListening={isListening} 
+                  transcript={transcript}
+                  audioLevel={0.5} // This would come from the Web Audio API
+                />
+                
+                <div className="text-center max-w-md">
+                  <h3 className="text-lg font-semibold mb-2">Say "UPI ACTIVATE" to start</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Using Web Audio API for voice recognition
+                  </p>
+                </div>
+              </div>
+            ) : fallbackMode ? (
               <FirefoxFallback
                 onVoiceInput={(text) => simulateVoiceInput(text)}
                 placeholder="Type 'UPI ACTIVATE' to start or 'scan QR' to open camera"
