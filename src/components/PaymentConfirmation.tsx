@@ -1,5 +1,6 @@
 import { Button } from '@/components/ui/button';
 import { VoiceIndicator } from '@/components/VoiceIndicator';
+import { FirefoxFallback } from '@/components/FirefoxFallback';
 import { formatCurrency } from '@/lib/upiParser';
 import { CheckCircle2, User, Building2, IndianRupee, Mic } from 'lucide-react';
 import { useState, useEffect, useCallback } from 'react';
@@ -46,7 +47,7 @@ export const PaymentConfirmation = ({
     }
   }, [onConfirm, onCancel, toast]);
 
-  const { isListening, startListening, stopListening } = useVoiceRecognition({
+  const { isListening, fallbackMode, startListening, stopListening, simulateVoiceInput } = useVoiceRecognition({
     onResult: handleVoiceResult,
     onError: (error) => {
       toast({
@@ -81,9 +82,18 @@ export const PaymentConfirmation = ({
           <p className="text-sm text-muted-foreground">Review the details and respond with voice</p>
         </div>
 
-        {/* Voice Indicator */}
+        {/* Voice Indicator or Firefox Fallback */}
         <div className="flex flex-col items-center justify-center mb-6">
-          <VoiceIndicator isListening={isListening} transcript={transcript} />
+          {fallbackMode ? (
+            <FirefoxFallback
+              onVoiceInput={(text) => simulateVoiceInput(text)}
+              placeholder="Type 'yes' to proceed or 'no' to go back"
+              title="Confirm Payment"
+              description="Type your response to confirm or cancel the payment"
+            />
+          ) : (
+            <VoiceIndicator isListening={isListening} transcript={transcript} />
+          )}
         </div>
 
         <div className="space-y-4 mb-6">

@@ -1,6 +1,8 @@
 import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { VoiceIndicator } from '@/components/VoiceIndicator';
+import { FirefoxFallback } from '@/components/FirefoxFallback';
+import { BrowserDetection } from '@/components/BrowserDetection';
 import { QRScanner } from '@/components/QRScanner';
 import { PaymentConfirmation } from '@/components/PaymentConfirmation';
 import { PaymentSuccess } from '@/components/PaymentSuccess';
@@ -115,7 +117,7 @@ const Index = () => {
     }
   }, [flowState, toast]);
 
-  const { isListening, startListening, stopListening } = useVoiceRecognition({
+  const { isListening, isSupported, fallbackMode, startListening, stopListening, simulateVoiceInput } = useVoiceRecognition({
     onResult: handleVoiceResult,
     onError: (error) => {
       toast({
@@ -394,6 +396,9 @@ const Index = () => {
         </div>
       </header>
 
+      {/* Browser Detection */}
+      <BrowserDetection />
+
       {/* Main Content */}
       <main className="container max-w-lg mx-auto px-4 py-6">
         {isLoading ? (
@@ -408,21 +413,30 @@ const Index = () => {
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Ready to Pay?</h2>
               <p className="text-muted-foreground">
-                I'm listening for your voice commands
+                {fallbackMode ? "Use text input for commands" : "I'm listening for your voice commands"}
               </p>
             </div>
 
-            {/* Voice Indicator for constant listening */}
-            <div className="flex flex-col items-center justify-center space-y-6">
-              <VoiceIndicator isListening={isListening} transcript={transcript} />
-              
-              <div className="text-center max-w-md">
-                <h3 className="text-lg font-semibold mb-2">Say "UPI ACTIVATE" to start</h3>
-                <p className="text-muted-foreground text-sm">
-                  Or say "scan QR" to open camera directly
-                </p>
+            {/* Voice Indicator or Firefox Fallback */}
+            {fallbackMode ? (
+              <FirefoxFallback
+                onVoiceInput={(text) => simulateVoiceInput(text)}
+                placeholder="Type 'UPI ACTIVATE' to start or 'scan QR' to open camera"
+                title="Text Input Mode"
+                description="Voice recognition not supported. Please type your commands."
+              />
+            ) : (
+              <div className="flex flex-col items-center justify-center space-y-6">
+                <VoiceIndicator isListening={isListening} transcript={transcript} />
+                
+                <div className="text-center max-w-md">
+                  <h3 className="text-lg font-semibold mb-2">Say "UPI ACTIVATE" to start</h3>
+                  <p className="text-muted-foreground text-sm">
+                    Or say "scan QR" to open camera directly
+                  </p>
+                </div>
               </div>
-            </div>
+            )}
 
             <div className="space-y-4">
               <Button
@@ -437,7 +451,9 @@ const Index = () => {
             </div>
 
             <div className="glass-card rounded-xl p-6 space-y-2">
-              <h3 className="font-semibold mb-3">Voice Commands:</h3>
+              <h3 className="font-semibold mb-3">
+                {fallbackMode ? "Text Commands:" : "Voice Commands:"}
+              </h3>
               <ul className="space-y-2 text-sm text-muted-foreground">
                 <li>• "UPI ACTIVATE" - Start payment process</li>
                 <li>• "scan QR" - Open QR scanner</li>
@@ -450,20 +466,45 @@ const Index = () => {
           </div>
         ) : (flowState === 'listening-activate' || flowState === 'listening-amount' || flowState === 'authenticating') ? (
           <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
-            <VoiceIndicator isListening={isListening} transcript={transcript} />
+            {fallbackMode ? (
+              <FirefoxFallback
+                onVoiceInput={(text) => simulateVoiceInput(text)}
+                placeholder={
+                  flowState === 'listening-activate' ? "Type 'UPI ACTIVATE' or 'cancel'" :
+                  flowState === 'listening-amount' ? "Type amount like 'two hundred rupees'" :
+                  "Type 'Harsh' for authentication"
+                }
+                title={
+                  flowState === 'listening-activate' ? "Activation Required" :
+                  flowState === 'listening-amount' ? "Enter Amount" :
+                  "Authentication Required"
+                }
+                description={
+                  flowState === 'listening-activate' ? "Type 'UPI ACTIVATE' to start or 'cancel' to go back" :
+                  flowState === 'listening-amount' ? "Type the amount you want to pay" :
+                  "Type your authentication password"
+                }
+              />
+            ) : (
+              <VoiceIndicator isListening={isListening} transcript={transcript} />
+            )}
             
             <div className="text-center max-w-md">
               {flowState === 'listening-activate' && (
                 <>
-                  <h2 className="text-2xl font-bold mb-2">Say "UPI ACTIVATE"</h2>
+                  <h2 className="text-2xl font-bold mb-2">
+                    {fallbackMode ? "Type 'UPI ACTIVATE'" : "Say 'UPI ACTIVATE'"}
+                  </h2>
                   <p className="text-muted-foreground">
-                    Or say "cancel" to go back
+                    Or {fallbackMode ? "type" : "say"} "cancel" to go back
                   </p>
                 </>
               )}
               {flowState === 'listening-amount' && (
                 <>
-                  <h2 className="text-2xl font-bold mb-2">Say the Amount</h2>
+                  <h2 className="text-2xl font-bold mb-2">
+                    {fallbackMode ? "Type the Amount" : "Say the Amount"}
+                  </h2>
                   <p className="text-muted-foreground">
                     Example: "two hundred rupees" or "500 rupees"
                   </p>
