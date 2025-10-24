@@ -1,4 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useWebAudioRecognition } from './useWebAudioRecognition';
+import { createSpeechService, SpeechToTextConfig } from '../services/speechToTextService';
 
 interface VoiceRecognitionResult {
   transcript: string;
@@ -13,7 +15,7 @@ interface UseVoiceRecognitionProps {
   language?: string;
 }
 
-// Firefox and Raspberry Pi compatible voice recognition
+// Enhanced voice recognition with Web Audio API support for Firefox
 export const useVoiceRecognition = ({
   onResult,
   onError,
@@ -24,7 +26,9 @@ export const useVoiceRecognition = ({
   const [isSupported, setIsSupported] = useState(false);
   const [recognition, setRecognition] = useState<any | null>(null);
   const [fallbackMode, setFallbackMode] = useState(false);
+  const [useWebAudio, setUseWebAudio] = useState(false);
   const [userAgent, setUserAgent] = useState('');
+  const [speechService, setSpeechService] = useState<any>(null);
 
   // Keep latest callbacks without reinitializing recognition
   const onResultRef = useRef<typeof onResult>(onResult);
@@ -45,18 +49,40 @@ export const useVoiceRecognition = ({
     const isLinux = ua.includes('Linux');
     
     console.log('Browser detection:', { isFirefox, isRaspberryPi, isLinux, userAgent: ua });
-  }, []);
+    
+    // Initialize speech service
+    const config: SpeechToTextConfig = {
+      provider: 'local',
+      language: language
+    };
+    setSpeechService(createSpeechService(config));
+  }, [language]);
+
+  // Web Audio API hook for Firefox compatibility
+  const webAudioRecognition = useWebAudioRecognition({
+    onResult: (result) => {
+      console.log('Web Audio result:', result);
+      onResultRef.current?.(result);
+    },
+    onError: (error) => {
+      console.error('Web Audio error:', error);
+      onErrorRef.current?.(error);
+    },
+    continuous,
+    language
+  });
 
   useEffect(() => {
     const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
     const isFirefox = userAgent.includes('Firefox');
     const isRaspberryPi = userAgent.includes('arm') || userAgent.includes('ARM') || userAgent.includes('aarch64');
 
-    // Check for Firefox on Raspberry Pi - use fallback mode
+    // Check for Firefox on Raspberry Pi - use Web Audio API
     if (isFirefox && (isRaspberryPi || userAgent.includes('Linux'))) {
-      console.log('Firefox on Raspberry Pi detected - using fallback mode');
-      setIsSupported(false);
-      setFallbackMode(true);
+      console.log('Firefox on Raspberry Pi detected - using Web Audio API');
+      setIsSupported(true);
+      setFallbackMode(false);
+      setUseWebAudio(true);
       return;
     }
 
@@ -69,6 +95,7 @@ export const useVoiceRecognition = ({
 
     setIsSupported(true);
     setFallbackMode(false);
+    setUseWebAudio(false);
     
     try {
       const recognitionInstance = new SpeechRecognition();
@@ -115,6 +142,13 @@ export const useVoiceRecognition = ({
   }, [continuous, language, userAgent]);
 
   const startListening = useCallback(() => {
+    if (useWebAudio) {
+      // Use Web Audio API for Firefox on Raspberry Pi
+      webAudioRecognition.startListening();
+      setIsListening(true);
+      return;
+    }
+
     if (fallbackMode) {
       // In fallback mode, we'll use a text input approach
       setIsListening(true);
@@ -130,9 +164,15 @@ export const useVoiceRecognition = ({
         onErrorRef.current?.('Failed to start listening');
       }
     }
-  }, [recognition, isListening, fallbackMode]);
+  }, [recognition, isListening, fallbackMode, useWebAudio, webAudioRecognition]);
 
   const stopListening = useCallback(() => {
+    if (useWebAudio) {
+      webAudioRecognition.stopListening();
+      setIsListening(false);
+      return;
+    }
+
     if (recognition && isListening) {
       try {
         recognition.stop();
@@ -141,9 +181,9 @@ export const useVoiceRecognition = ({
       }
     }
     setIsListening(false);
-  }, [recognition, isListening]);
+  }, [recognition, isListening, useWebAudio, webAudioRecognition]);
 
-  // Fallback method for Firefox on Raspberry Pi
+  // Fallback method for text input
   const simulateVoiceInput = useCallback((text: string) => {
     if (fallbackMode && onResultRef.current) {
       onResultRef.current({
@@ -155,9 +195,10 @@ export const useVoiceRecognition = ({
   }, [fallbackMode]);
 
   return {
-    isListening,
-    isSupported,
+    isListening: useWebAudio ? webAudioRecognition.isListening : isListening,
+    isSupported: useWebAudio ? webAudioRecognition.isSupported : isSupported,
     fallbackMode,
+    useWebAudio,
     startListening,
     stopListening,
     simulateVoiceInput, // For fallback mode
