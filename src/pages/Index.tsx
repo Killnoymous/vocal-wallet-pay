@@ -2,6 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { VoiceIndicator } from '@/components/VoiceIndicator';
 import { FirefoxFallback } from '@/components/FirefoxFallback';
+import { BrowserDetection } from '@/components/BrowserDetection';
 import { QRScanner } from '@/components/QRScanner';
 import { PaymentConfirmation } from '@/components/PaymentConfirmation';
 import { PaymentSuccess } from '@/components/PaymentSuccess';
@@ -243,6 +244,9 @@ const Index = () => {
           </div>
         </div>
       </header>
+
+      {/* Browser Detection */}
+      <BrowserDetection />
 
       {/* Main Content */}
       <main className="container max-w-lg mx-auto px-4 py-6">
