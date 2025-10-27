@@ -40,14 +40,6 @@ export const getWalletData = (): WalletData => {
         status: 'success',
         transactionNote: 'Demo balance deposited by Sicario',
       },
-      {
-        id: 'demo-2',
-        type: 'sent',
-        amount: 1500,
-        payeeName: 'Demo Merchant',
-        timestamp: Date.now() - 172800000,
-        status: 'success',
-      },
     ],
   };
 };
