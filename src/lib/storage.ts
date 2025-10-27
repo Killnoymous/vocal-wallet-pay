@@ -93,3 +93,7 @@ export const validateDemoPassphrase = (spokenPhrase: string): boolean => {
 export const generateTransactionId = (): string => {
   return `TXN${Date.now()}${Math.random().toString(36).substr(2, 9)}`.toUpperCase();
 };
+
+export const resetDemoData = (): void => {
+  localStorage.removeItem(STORAGE_KEY);
+};

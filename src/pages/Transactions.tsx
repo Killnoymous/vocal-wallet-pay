@@ -1,14 +1,19 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { TransactionHistory } from '@/components/TransactionHistory';
-import { getWalletData } from '@/lib/storage';
+import { getWalletData, resetDemoData } from '@/lib/storage';
 import { formatCurrency } from '@/lib/upiParser';
-import { ArrowLeft, Wallet, TrendingUp, TrendingDown } from 'lucide-react';
+import { ArrowLeft, Wallet, TrendingUp, TrendingDown, RotateCcw } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 const Transactions = () => {
   const navigate = useNavigate();
-  const [walletData] = useState(getWalletData());
+  const [walletData, setWalletData] = useState(getWalletData());
+
+  const handleResetDemo = () => {
+    resetDemoData();
+    setWalletData(getWalletData());
+  };
 
   const totalReceived = walletData.transactions
     .filter(t => t.type === 'received' && t.status === 'success')
@@ -76,6 +81,16 @@ const Transactions = () => {
 
       {/* Transaction History */}
       <main className="container max-w-lg mx-auto px-4 py-6">
+        <div className="mb-4">
+          <Button
+            onClick={handleResetDemo}
+            variant="outline"
+            className="w-full"
+          >
+            <RotateCcw className="mr-2 h-4 w-4" />
+            Reset to Fresh Demo Data
+          </Button>
+        </div>
         <TransactionHistory transactions={walletData.transactions} />
       </main>
     </div>
