@@ -14,7 +14,7 @@ export interface WalletData {
   transactions: Transaction[];
 }
 
-const STORAGE_KEY = 'lovable_wallet_data';
+const STORAGE_KEY = 'upi_wallet_data';
 const DEMO_PASSPHRASE = 'harsh';
 
 export const getWalletData = (): WalletData => {
@@ -29,15 +29,16 @@ export const getWalletData = (): WalletData => {
 
   // Return initial demo data
   return {
-    balance: 10000, // ₹10,000 demo balance
+    balance: 15000, // ₹15,000 demo balance
     transactions: [
       {
         id: 'demo-1',
         type: 'received',
-        amount: 5000,
-        payeeName: 'Demo Sender',
+        amount: 15000,
+        payeeName: 'Sicario',
         timestamp: Date.now() - 86400000,
         status: 'success',
+        transactionNote: 'Demo balance deposited by Sicario',
       },
       {
         id: 'demo-2',

@@ -7,12 +7,12 @@ import { BrowserDetection } from '@/components/BrowserDetection';
 import { QRScanner } from '@/components/QRScanner';
 import { PaymentConfirmation } from '@/components/PaymentConfirmation';
 import { PaymentSuccess } from '@/components/PaymentSuccess';
-import { TransactionHistory } from '@/components/TransactionHistory';
 import { useVoiceRecognition } from '@/hooks/useVoiceRecognition';
 import { parseUPIQR, parseVoiceAmount, formatCurrency, UPIDetails } from '@/lib/upiParser';
 import { getWalletData, saveTransaction, validateDemoPassphrase, generateTransactionId, Transaction } from '@/lib/storage';
 import { Wallet, QrCode, Mic, History } from 'lucide-react';
 import { useToast } from '@/hooks/use-toast';
+import { useNavigate } from 'react-router-dom';
 
 type FlowState = 
   | 'idle'
@@ -21,11 +21,11 @@ type FlowState =
   | 'listening-amount'
   | 'confirming-payment'
   | 'authenticating'
-  | 'success'
-  | 'history';
+  | 'success';
 
 const Index = () => {
   const { toast } = useToast();
+  const navigate = useNavigate();
   const [flowState, setFlowState] = useState<FlowState>('idle');
   const [walletData, setWalletData] = useState(getWalletData());
   const [transcript, setTranscript] = useState('');
@@ -224,14 +224,14 @@ const Index = () => {
                 <Wallet className="h-6 w-6 text-primary-foreground" />
               </div>
               <div>
-                <h1 className="text-2xl font-bold">Lovable Wallet</h1>
+                <h1 className="text-2xl font-bold">UPI Wallet</h1>
                 <p className="text-xs text-muted-foreground">Voice-Powered UPI</p>
               </div>
             </div>
             <Button
               variant="outline"
               size="icon"
-              onClick={() => setFlowState(flowState === 'history' ? 'idle' : 'history')}
+              onClick={() => navigate('/transactions')}
             >
               <History className="h-5 w-5" />
             </Button>
@@ -251,9 +251,7 @@ const Index = () => {
 
       {/* Main Content */}
       <main className="container max-w-lg mx-auto px-4 py-6">
-        {flowState === 'history' ? (
-          <TransactionHistory transactions={walletData.transactions} />
-        ) : flowState === 'idle' ? (
+        {flowState === 'idle' ? (
           <div className="space-y-6">
             <div className="text-center">
               <h2 className="text-2xl font-bold mb-2">Ready to Pay?</h2>
@@ -309,6 +307,16 @@ const Index = () => {
               >
                 <QrCode className="mr-3 h-6 w-6" />
                 Scan QR Code Manually
+              </Button>
+              
+              <Button
+                onClick={() => navigate('/transactions')}
+                variant="outline"
+                className="w-full h-16 text-lg"
+                size="lg"
+              >
+                <History className="mr-3 h-6 w-6" />
+                View All Transactions
               </Button>
             </div>
 

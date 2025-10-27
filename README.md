@@ -1,22 +1,14 @@
-# Welcome to your Lovable project
+# UPI Wallet - Voice-Powered UPI Payments
 
 ## Project info
 
-**URL**: https://lovable.dev/projects/48b244e7-c1a5-411e-9274-d750f3bb4bda
+A demo voice-driven UPI QR payment application with hands-free payment flow.
 
 ## How can I edit this code?
 
-There are several ways of editing your application.
-
-**Use Lovable**
-
-Simply visit the [Lovable Project](https://lovable.dev/projects/48b244e7-c1a5-411e-9274-d750f3bb4bda) and start prompting.
-
-Changes made via Lovable will be committed automatically to this repo.
-
 **Use your preferred IDE**
 
-If you want to work locally using your own IDE, you can clone this repo and push changes. Pushed changes will also be reflected in Lovable.
+You can clone this repo and push changes to work on the application locally.
 
 The only requirement is having Node.js & npm installed - [install with nvm](https://github.com/nvm-sh/nvm#installing-and-updating)
 
@@ -62,12 +54,12 @@ This project is built with:
 
 ## How can I deploy this project?
 
-Simply open [Lovable](https://lovable.dev/projects/48b244e7-c1a5-411e-9274-d750f3bb4bda) and click on Share -> Publish.
+You can deploy this project using any static hosting service like Vercel, Netlify, or GitHub Pages.
 
-## Can I connect a custom domain to my Lovable project?
+## Features
 
-Yes, you can!
-
-To connect a domain, navigate to Project > Settings > Domains and click Connect Domain.
-
-Read more here: [Setting up a custom domain](https://docs.lovable.dev/features/custom-domain#custom-domain)
+- Voice-powered UPI payments
+- QR code scanning
+- Transaction history
+- Demo balance with Sicario deposit
+- Browser compatibility with fallback modes
